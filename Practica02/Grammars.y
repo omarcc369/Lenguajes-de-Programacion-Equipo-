@@ -41,25 +41,29 @@ ASA : nat                      { Num $1 }
 --   * operadores estrictamente binarios: expt y eq;
 --   * operadores unarios: not, add1, sub1, zero?.
 
-    | '(' sub1 ASA ')'          { Sub1 $3 }
-    | '(' add1 ASA ')'          { Add1 $3 }
-    | '(' not ASA ')'           { Not $3 }
-    | '(' zero? ASA ')'         { ZeroP $3 }
-    | '(' and E ')'         { And $3 }
-    | '(' or [ASA] ')'          { Or $3 }
-    | '(' '+' [ASA] ')'         { Add $3 }
-    | '(' '-' [ASA] ')'         { Sub $3 $4 }
+    | '(' "sub1" ASA ')'          { Sub1 $3 }
+    | '(' "add1" ASA ')'          { Add1 $3 }
+    | '(' "not" ASA ')'           { Not $3 }
+    | '(' "zero?" ASA ')'         { ZeroP $3 }
+    | '(' "and" E ')'             { And $3 }
+    | '(' "or" E ')'              { Or $3 }
+    | '(' '+' E ')'               { Add $3 }
+    | '(' '-' E ')'               { Sub $3 }
+    | '(' '*' E ')'               { Mul $3 }
+    | '(' '/' E ')'               { Div $3 }
+    | '(' '<' E ')'               { Lt $3 }
+    | '(' '>' E ')'               { Gt $3 }
+    | '(' "<=" E ')'              { Le $3 }
+    | '(' ">=" E ')'              { Ge $3 }
+    | '(' "expt" ASA ASA ')'      { Expt $3 $4 }
+    | '(' "eq" ASA ASA ')'        { EqP $3 $4 }
 
 -- RETO 3:
 -- Agrega un no terminal para representar dos o mas argumentos.
 -- El resultado debe ser una lista de ASA.
 
-{
-data E
-  = Nil
-  | Con ASA E
-  deriving (Eq, Show)
-}
+ E : ASA ASA                      { [$1, $2] }
+  | ASA E                         { $1: $2 }
 
 {
 parseError :: [Token] -> a

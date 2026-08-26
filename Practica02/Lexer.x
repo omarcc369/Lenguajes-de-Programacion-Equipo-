@@ -43,10 +43,11 @@ or                      { \_ -> TokenOr }
 \<                      { \_ -> TokenLT }
 ">="                    { \_ -> TokenGE }
 "<="                    { \_ -> TokenLE }
-eq                      { \_ -> TokenLE }
+eq                      { \_ -> TokenEq }
 add1                    { \_ -> TokenAdd1 }
 sub1                    { \_ -> TokenSub1 }
-zero?                   { \_ -> TokenZeroP }
+"zero?"                   { \_ -> TokenZeroP }
+expt                    { \_ -> TokenExpt }
 
 .                     { \s -> error ("Lexical error: caracter no reconocido = "
                                       ++ show s
