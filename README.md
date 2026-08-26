@@ -6,4 +6,4 @@
 
 - Kristian Leonel Benítez Pérez
 - Saúl
-- Omar
+- Guerrero Garza Gerardo Omar
