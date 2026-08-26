@@ -1,2 +1,9 @@
-# Lenguajes de programación equipo /
-todas nuestras prácticas a partir de la 2
+# Equipo "/"
+
+> Todas nuestras prácticas a partir de la 2
+
+## Integrantes
+
+- Kristian Leonel Benítez Pérez
+- Saúl
+- Omar
