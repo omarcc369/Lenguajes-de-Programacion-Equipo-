@@ -35,7 +35,8 @@ import Lexer (Token(..))
 
 %%
 
-ASA : nat                           { Num $1 }
+ASA : var                           { Id $1 }
+    | nat                           { Num $1 }
     | bool                          { Boolean $1 }
     | '(' '+' Args ')'              { Add $3 }
     | '(' '-' Args ')'              { Sub $3 }
@@ -61,12 +62,22 @@ ASA : nat                           { Num $1 }
 --   * let* con una o mas asociaciones;
 --   * los no terminales Bindings y Binding.
 
-Args : ASA ASA                       { [$1, $2] }
-     | ASA Args                      { $1 : $2 }
+    | '(' "let" '(' Bindings ')'  ASA ')'           { Let $4 $6 }
+    | '(' "let*" '(' Bindings ')'  ASA ')'          { LetStar $4 $6 }
+
+Bind : '(' var ASA ')'                              { ($2, $3) }
+
+Bindings : Bind                                     { [$1] }
+         | Bindings Bind                            { $1 ++ [$2] }
+
+Args : ASA ASA                                      { [$1, $2] }
+     | Args ASA                                     { $1 ++ [$2] }
 
 {
 parseError :: [Token] -> a
 parseError toks = error ("Parse error: " ++ show toks)
+
+
 
 type Binding = (String, ASA)
 
