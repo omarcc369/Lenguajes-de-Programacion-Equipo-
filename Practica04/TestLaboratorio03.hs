@@ -174,5 +174,3 @@ main = do
   quickCheck prop_aplicacion_es_ansiosa
   quickCheck prop_primitivas_comprueban_tipos
   quickCheck prop_integracion
-
-Displaying TestLaboratorio04.hs.
