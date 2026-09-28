@@ -1,7 +1,6 @@
 module Interp where
 
 import Grammars
-import Data.Maybe (Maybe(Nothing))
 
 data ASA
     = Id Nombre
@@ -52,60 +51,49 @@ binaryOp op (x:xs) = Just (foldl op x xs)
 -- mediante LetS x e1 e2 ==> App (Fun x e2') e1'. La primera ligadura debe
 -- quedar en el let exterior para que las siguientes puedan usarla.
 desugar :: SASA -> Maybe ASA
-desugar e = case e of
-    IdS x          -> IdS x
-    NumS n         -> Num n
-    BooleanS b     -> Boolean b
-    Add xs
-        | Just xs' <- transverse desugar xs = binaryOp Add xs
-        | otherwise = Nothing
--- Convierte las ligaduras de let* en let anidados y despues elimina cada let
--- mediante LetS x e1 e2 ==> App (Fun x e2') e1'. La primera ligadura debe
--- quedar en el let exterior para que las siguientes puedan usarla.
-desugar :: SASA -> Maybe ASA
 desugar (IdS x)                         = Just (Id x)
 desugar (NumS n)                        = Just (Num n)
 desugar (BooleanS b)                    = Just (Boolean b)
 
 desugar (AddS xs)                       = do
-        | Just xs' <- traverse desugar xs = binaryOp Add xs'
-        | otherwise                       = Nothing
+        xs' <- traverse desugar xs
+        binaryOp Add xs'
 
 desugar (SubS xs)                       = do
-        | Just xs' <- traverse desugar xs = binaryOp Sub xs'
-        | otherwise                       = Nothing
+        xs' <- traverse desugar xs
+        binaryOp Sub xs'
 
 desugar (NotS e)                        = do
-        | Just e'      <- desugar e = (Not e')
-        | otherwise                 = Nothing
+        e' <- desugar e
+        return (Not e')
 
 desugar (LetS x exprLig cuerpo)         = do
-        exprLig'     <- desugar exprLig
-        cuerpo' <- desugar cuerpo
-    return (App (Fun x cuerpo') exprLig')
+        exprLig' <- desugar exprLig
+        cuerpo'  <- desugar cuerpo
+        return (App (Fun x cuerpo') exprLig')
 
-desugar (LetS x exprLig cuerpo)         = do
-        cuerpo' <- desugar cuerpo
-        Just (App (Fun x cuerpo') exprLig')
-    
-desugar (AppS funcion arg)              = do
-        funcion'        <- desugar funcion
-        arg'            <- mapM desugar arg
-        curryApp funcion' arg'
+desugar (LetStarS [] _)                 = Nothing
+desugar (LetStarS [(x, e)] cuerpo)      = desugar (LetS x e cuerpo)
+desugar (LetStarS ((x, e):bs) cuerpo)   = desugar (LetS x e (LetStarS bs cuerpo))
 
-desugar (LetStarS [] cuerpo)            = desugar cuerpo
-desugar (LetStarS ((x e):bs) cuerpo)    = App (Fun x desugar(LetStarS bs cuerpo)) (desugar e)
+desugar (FunS params cuerpo)            = do
+        cuerpo' <- desugar cuerpo
+        curryFun params cuerpo'
+
+desugar (AppS funcion args)             = do
+        funcion' <- desugar funcion
+        args'    <- traverse desugar args
+        curryApp funcion' args'
 
 
 -- RETO 2: evaluacion con cerraduras ---------------------------------------
 
 -- Busca la asociacion mas reciente de un identificador.
 lookupEnv :: Nombre -> Env -> Maybe Value
-            lookupEnv x [] = Nothing
-            lookupEnv x ((llave,valor):ys)
-                | x == llave    = Just valor
-                | ottherwise    = lookupEnv x ys
-            
+lookupEnv _ [] = Nothing
+lookupEnv x ((llave, valor):ys)
+        | x == llave = Just valor
+        | otherwise  = lookupEnv x ys
 
 -- Evalua con alcance estatico. Fun produce una cerradura con el ambiente
 -- actual. App evalua primero la posicion de funcion, despues el argumento y
@@ -114,3 +102,33 @@ lookupEnv :: Nombre -> Env -> Maybe Value
 -- Conserva la resta truncada y la convencion de que todo numero cuenta como
 -- verdadero cuando aparece como operando de Not.
 bigStep :: Env -> ASA -> Maybe Value
+bigStep env (Id x)          = lookupEnv x env
+bigStep _   (Num n)         = Just (NumV n)
+bigStep _   (Boolean b)     = Just (BooleanV b)
+
+bigStep env (Add i d)       = do
+        NumV n <- bigStep env i
+        NumV m <- bigStep env d
+        return (NumV (n + m))
+
+bigStep env (Sub i d)       = do
+        NumV n <- bigStep env i
+        NumV m <- bigStep env d
+        return (NumV (max 0 (n - m)))
+
+bigStep env (Not e)         = do
+        v <- bigStep env e
+        case v of
+            BooleanV b -> Just (BooleanV (not b))
+            NumV _     -> Just (BooleanV False)
+            _          -> Nothing
+
+bigStep env (Fun x cuerpo)  = Just (ClosureV x cuerpo env)
+
+bigStep env (App funcion argumento) = do
+        cerradura <- bigStep env funcion
+        case cerradura of
+            ClosureV parametro cuerpo envDef -> do
+                valorArg <- bigStep env argumento
+                seq valorArg (bigStep ((parametro, valorArg) : envDef) cuerpo)
+            _ -> Nothing

@@ -9,6 +9,7 @@ import System.Console.Haskeline (defaultSettings, getInputLine, runInputT)
 -- Integra el analisis, el desazucarado y la evaluacion desde el ambiente
 -- vacio. Propaga Nothing desde cualquiera de las dos etapas finales.
 evalua :: String -> Maybe Value
+evalua entrada = desugar (parse (lexer entrada)) >>= bigStep []
 
 -- Infraestructura provista: no forma parte de los retos.
 repl :: IO ()
