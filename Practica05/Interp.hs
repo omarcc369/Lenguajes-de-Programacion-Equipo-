@@ -107,10 +107,16 @@ desugar (LetRecS nombre definicion cuerpo) =
 
 -- Busca la asociacion mas reciente sin exigir su contenido.
 lookupEnv :: Nombre -> Env -> Maybe Value
+lookupEnv _ [] = Nothing
+lookupEnv x ((y,v): resto)
+  | x == y = Just v
+  | otherwise = lookupEnv x resto
 
 -- Exige una cerradura de expresion usando el ambiente guardado. Si al
 -- evaluarla se obtiene otra ExprV, continua hasta producir otro valor.
 strict :: Value -> Maybe Value
+strict (ExprV e env) = bigStep env e >>= strict
+strict v = Just v
 
 -- Semantica de paso grande con alcance estatico y evaluacion perezosa.
 --
@@ -123,3 +129,45 @@ strict :: Value -> Maybe Value
 --
 -- La resta sobre naturales permanece truncada en cero.
 bigStep :: Env -> ASA -> Maybe Value
+bigStep _ (Num v) = Just (NumV v)
+bigStep _ (Boolean v) = Just (BooleanV v )
+bigStep env (Id v) = lookupEnv v env
+bigStep env (Fun x body) = Just (ClosureV x body env)
+bigStep env (Add i d) =
+  evalStrict env i >>= \i' ->
+    evalStrict env d >>= \d' ->
+      sumaV i' d'
+bigStep env (Sub i d) =
+  evalStrict env i >>= \i' ->
+    evalStrict env d >>= \d' ->
+      restaV i' d'
+bigStep env (Not e) =
+  evalStrict env e >>= notV
+bigStep env (If c t e) =
+  evalStrict env c >>= \c' -> chooseBranch env t e c'
+bigStep env (App f a) =
+  evalStrict env f >>= \f' -> apply env a f'
+
+evalStrict :: Env -> ASA -> Maybe Value
+evalStrict env e = bigStep env e >>= strict
+
+sumaV :: Value -> Value -> Maybe Value
+sumaV (NumV a) (NumV b) = Just (NumV (a + b))
+sumaV _ _ = Nothing
+
+restaV :: Value -> Value -> Maybe Value
+restaV (NumV a) (NumV b) = Just (NumV (max 0 (a - b)))
+restaV _ _ = Nothing
+
+notV :: Value -> Maybe Value
+notV (BooleanV b) = Just (BooleanV (not b))
+notV _ = Nothing
+
+chooseBranch :: Env -> ASA -> ASA -> Value -> Maybe Value
+chooseBranch env t _ (BooleanV True) = bigStep env t
+chooseBranch env _ e (BooleanV False) = bigStep env e
+chooseBranch _ _ _ _ = Nothing
+
+apply :: Env -> ASA -> Value -> Maybe Value
+apply env a (ClosureV p b env') = bigStep ((p, ExprV a env) : env') b
+apply _ _ _ = Nothing
