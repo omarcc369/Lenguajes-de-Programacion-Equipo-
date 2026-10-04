@@ -41,16 +41,17 @@ SASA : var                               { IdS $1 }
                                          { FunS $4 $6 }
      | '(' SASA Arguments ')'            { AppS $2 $3 }
 
-     -- RETO 2
-     -- Agrega aqui las producciones de:
-     --   (if <condicion> <consecuente> <alternativa>)
-     --   (cond (<condicion> <rama>) ... (else <alternativa>))
-     --   (letrec (<nombre> <definicion>) <cuerpo>)
-     --
-     -- Un cond debe contener al menos una clausula ordinaria y terminar
-     -- siempre con una clausula else. Consume la primera clausula ordinaria
-     -- en la produccion de cond y define un no terminal Clauses para las
-     -- clausulas restantes y el else final.
+     | '(' "if" SASA SASA SASA ')'       { IfS $3 $4 $5 }
+     | '(' "cond" '(' SASA SASA ')' Clauses ')'
+                                         { let (clausulas, ramaElse) = $7
+                                           in CondS (($4, $5) : clausulas) ramaElse }
+     | '(' "letrec" '(' var SASA ')' SASA ')'
+                                         { LetRecS $4 $5 $7 }
+
+-- Definición de nuestro terminal Clauses, que representa las cláusulas faltantes de la expresión condicional 
+Clauses : '(' "else" SASA ')'            { ([], $3) }
+        | '(' SASA SASA ')' Clauses      { let (clausulas, ramaElse) = $5
+                                          in (($2, $3) : clausulas, ramaElse) }
 
 Params : var                             { [$1] }
        | var Params                      { $1 : $2 }
