@@ -274,7 +274,6 @@ comparaNums operador exprs = do
 
 
 -- Evaluación Big-Step de expresiones ASA
-
 bigStep :: ASA -> Maybe ASA
 bigStep (Id _)       = Nothing
 bigStep (Num n)      = Just (Num n)

@@ -4,6 +4,6 @@
 
 ## Integrantes
 
-- Kristian Leonel Benítez Pérez
-- Saúl Vega Navas
+- Benítez Pérez Kristian Leonel
+- Vega Navas Saúl
 - Guerrero Garza Gerardo Omar
